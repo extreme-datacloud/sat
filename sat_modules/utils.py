@@ -22,8 +22,7 @@ Date: May 2018
 """
 
 #Submodules
-from wq_modules import config
-from wq_modules import metadata_gen
+from sat_modules import config
 
 #APIs
 import zipfile, tarfile
@@ -129,7 +128,7 @@ def path():
 
         for region in list_region:
 
-            os.mkdir(os.path.join(local_path, region))
+	    os.mkdir(os.path.join(local_path, region))
             dictionary['Sentinel-2'][region] = []
             dictionary['Landsat 8'][region] = []
 

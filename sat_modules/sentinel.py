@@ -31,8 +31,8 @@ Date: Sep 2018
 """
 
 #imports subfunctions
-from wq_modules import config
-from wq_modules import utils
+from sat_modules import config
+from sat_modules import utils
 
 #imports apis
 import requests
@@ -145,9 +145,6 @@ class Sentinel:
 
             #create path and folder for the scene
             region_path = os.path.join(self.path, self.region)
-            date_path = os.path.join(region_path, filename)
-            self.output[filename]['path'] = date_path
-            os.mkdir(date_path)
 
             print ('    Downloading {} files'.format(filename))
             downloaded_files['Sentinel-2'][self.region].append(filename)

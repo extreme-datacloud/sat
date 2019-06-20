@@ -1,10 +1,10 @@
 #!/usr/bin/python3
 import argparse
 
-from wq_modules import config
-from wq_modules import utils
-from wq_modules import sentinel
-from wq_modules import landsat
+from sat_modules import config
+from sat_modules import utils
+from sat_modules import sentinel
+from sat_modules import landsat
 
 parser = argparse.ArgumentParser(description='Gets data from satellite')
 

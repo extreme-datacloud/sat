@@ -30,8 +30,8 @@ Date: Sep 2018
 """
 
 #imports subfunctions
-from wq_modules import config
-from wq_modules import utils
+from sat_modules import config
+from sat_modules import utils
 
 #imports apis
 import json
@@ -184,8 +184,6 @@ class Landsat:
 
             #create path and folder for the scene
             date_path = os.path.join(self.path, self.region, ID)
-            self.output[ID]['path'] = date_path
-            os.makedirs(date_path)
 
             print ('    Downloading {} files'.format(ID))
             downloaded_files['Landsat 8'][self.region].append(ID)
