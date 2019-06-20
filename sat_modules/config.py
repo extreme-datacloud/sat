@@ -2,7 +2,7 @@
 import os
 
 #configure local path
-local_path = '/home/dani/Escritorio/download_satellite/data'
+local_path = "/home/dani/Escritorio/xdc_lfw_sat/sat/data"
 
 #Sentinel credentials
 sentinel_pass = {'username': "lifewatch", 'password': "xdc_lfw_data"}

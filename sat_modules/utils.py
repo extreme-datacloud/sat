@@ -128,7 +128,7 @@ def path():
 
         for region in list_region:
 
-	    os.mkdir(os.path.join(local_path, region))
+            os.mkdir(os.path.join(local_path, region))
             dictionary['Sentinel-2'][region] = []
             dictionary['Landsat 8'][region] = []
 

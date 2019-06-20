@@ -183,7 +183,7 @@ class Landsat:
                 continue
 
             #create path and folder for the scene
-            date_path = os.path.join(self.path, self.region, ID)
+            date_path = os.path.join(self.path, self.region)
 
             print ('    Downloading {} files'.format(ID))
             downloaded_files['Landsat 8'][self.region].append(ID)
