@@ -17,14 +17,16 @@
 """
 Given two dates and region, download N Sentinel Collections scenes from ESA
 Sentinel dataHUB.
-The downloaded Sentinel collection scenes are compatible with S2MSI1C
+
+The downloaded Sentinel collection scenes are compatible with:
+S2MSI1C: Top-of-atmosphere reflectances in cartographic geometry
+or S2MSI2A: Bottom-of-atmosphere reflectance in cartographic geometry
 
 Parameters
 ----------
 inidate: datetime.strptime("YYYY-MM-dd", "%Y-%m-%d")
 enddate: datetime.strptime("YYYY-MM-dd", "%Y-%m-%d")
 region: name of one reservoir saved in the "coord_reservoirs.json" file
-action:
 
 Author: Daniel Garcia Diaz
 Date: Sep 2018
@@ -42,7 +44,7 @@ import json
 
 class Sentinel:
 
-    def __init__(self, inidate, enddate, region=None, platform='Sentinel-2', producttype='S2MSI1C'):
+    def __init__(self, inidate, enddate, region=None, platform='Sentinel-2', producttype="S2MSI1C"):
 
         #Search parameter needed for download
         self.inidate = inidate.strftime('%Y-%m-%dT%H:%M:%SZ')
@@ -90,12 +92,17 @@ class Sentinel:
 
         # Parse the response
         json_feed = response.json()['feed']
-        results = json_feed['entry']
-        if isinstance(results, dict):  # if the query returns only one product, products will be a dict not a list
-            results = [results]
-
         print('Found {} results from Sentinel'.format(json_feed['opensearch:totalResults']))
-        print('Retrieving {} results'.format(len(results)))
+
+        if int(json_feed['opensearch:totalResults']) == 0:
+            results = []
+
+        else:
+            results = json_feed['entry']
+            print('Retrieving {} results'.format(len(results)))
+
+            if isinstance(results, dict):  # if the query returns only one product, products will be a dict not a list
+                results = [results]
 
         return results
 

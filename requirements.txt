@@ -12,7 +12,7 @@ imageio
 scikit-image
 xmltodict
 sqlalchemy
-mysqlclient
+mysql_client
 celery
 tqdm
 requests
