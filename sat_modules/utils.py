@@ -27,19 +27,18 @@ from sat_modules import config
 #APIs
 import zipfile, tarfile
 import argparse
-import numpy as np
-import os, shutil
-import json
+
+import os
+import io
+
 import datetime
-import utm
-from netCDF4 import Dataset
 from six import string_types
 
 
 def valid_date(sd, ed):
     """
     check if the format date input is string("%Y-%m-%d") or datetime.date
-    and return it as format datetime.strptime("YYYY-MM-dd", "%Y-%m-%d")
+    and return it as format strftime("%Y-%m-%dT%H:%M:%SZ")
 
     Parameters
     ----------
@@ -49,9 +48,9 @@ def valid_date(sd, ed):
     Returns
     -------
     sd : datetime
-        datetime.strptime("YYYY-MM-dd", "%Y-%m-%d")
+        strftime("%Y-%m-%dT%H:%M:%SZ")
     ed : datetime
-        datetime.strptime("YYYY-MM-dd", "%Y-%m-%d")
+        strftime("%Y-%m-%dT%H:%M:%SZ")
 
     Raises
     ------
@@ -63,14 +62,14 @@ def valid_date(sd, ed):
 
     if isinstance(sd, datetime.date) and isinstance(ed, datetime.date):
 
-        return sd, ed
+        return sd.strftime("%Y-%m-%dT%H:%M:%SZ"), ed.strftime('%Y-%m-%dT%H:%M:%SZ')
 
     elif isinstance(sd, string_types) and isinstance(ed, string_types):    
         try:
             sd = datetime.datetime.strptime(sd, "%Y-%m-%d")
             ed = datetime.datetime.strptime(ed, "%Y-%m-%d")
             if sd < ed:
-                return sd, ed
+                return sd.strftime("%Y-%m-%dT%H:%M:%SZ"), ed.strftime("%Y-%m-%dT%H:%M:%SZ")
             else:
                 msg = "Unsupported date value: '{} or {}'.".format(sd, ed)
                 raise argparse.ArgumentTypeError(msg)
@@ -82,13 +81,13 @@ def valid_date(sd, ed):
         raise argparse.ArgumentTypeError(msg)
 
 
-def valid_region(r):
+def valid_region(region, coord = None):
     """
-    check if the regions exits
+    check if the region exits in the config file
 
     Parameters
     ----------
-    r(region) : str e.g: "CdP"
+    coordinates: list of coordinates
 
     Raises
     ------
@@ -96,41 +95,54 @@ def valid_region(r):
             Not a valid region
     """
 
-    if r in config.regions:
-        pass
+    if region in config.regions:
+
+        coordinates = config.regions[region]
+
     else:
-        msg = "Not a valid region: '{0}'.".format(r)
-        raise argparse.ArgumentTypeError(msg)
+
+        #Hacer saltar el widget del mapa
+
+        W = round(-360.0 + float(coord.split('[')[2][:8]), 4)
+        S = float(coord.split('[')[2][-11:-4])
+        E = round(-360.0 + float(coord.split('[')[4][:8]), 4)
+        N = float(coord.split('[')[4][-11:-4])
+
+        coordinates = {}
+        coordinates['W'], coordinates['S'] = W, S
+        coordinates['E'], coordinates['N'] = E, N
+
+    return coordinates
 
 
-def path():
+def open_compressed(byte_stream, file_format, output_folder):
     """
-    Configure the tree of datasets path. 
-    Create the folder and the downloaded_files file.
-
+    Extract and save a stream of bytes of a compressed file from memory.
     Parameters
     ----------
-    path : datasets path from config file
+    byte_stream : bytes
+    file_format : str
+        Compatible file formats: tarballs, zip files
+    output_folder : str
+        Folder to extract the stream
+    Returns
+    -------
+    Folder name of the extracted files.
     """
 
-    file = 'downloaded_files.json'
-    list_region = config.regions
-    local_path = config.local_path
+    tar_extensions = ['tar', 'bz2', 'tb2', 'tbz', 'tbz2', 'gz', 'tgz', 'lz', 'lzma', 'tlz', 'xz', 'txz', 'Z', 'tZ']
+    if file_format in tar_extensions:
+        tar = tarfile.open(mode="r:{}".format(file_format), fileobj=io.BytesIO(byte_stream))
+        tar.extractall(output_folder)
+        folder_name = tar.getnames()[0]
+        return os.path.join(output_folder, folder_name)
 
-    try:
-        with open(os.path.join(local_path, file)) as data_file:
-            json.load(data_file)
-    except:
-        if not (os.path.isdir(local_path)):
-            os.mkdir(local_path)
+    elif file_format == 'zip':
+        zf = zipfile.ZipFile(io.BytesIO(byte_stream))
+        zf.extractall(output_folder)
+        folder_name = zf.namelist()[0].split('/')[0]
+        return os.path.join(output_folder, folder_name)
 
-        dictionary = {"Sentinel-2": {}, "Landsat 8": {}}
+    else:
+        raise ValueError('Invalid file format for the compressed byte_stream')
 
-        for region in list_region:
-
-            os.mkdir(os.path.join(local_path, region))
-            dictionary['Sentinel-2'][region] = []
-            dictionary['Landsat 8'][region] = []
-
-        with open(os.path.join(local_path, 'downloaded_files.json'), 'w') as outfile:
-            json.dump(dictionary, outfile)
