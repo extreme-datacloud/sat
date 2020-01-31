@@ -88,7 +88,7 @@ elif args.sat == "Landsat8":
                'cloud': args.cloud,
                'username':l8_credentials['username'],
                'password': l8_credentials['password'],
-               'path':os.path.join(args.path, 'l8_tiles')}
+               'output_path':os.path.join(args.path, 'l8_tiles')}
 
     #download landsat files
     l = landsat.download_landsat(**l8_args)
@@ -108,7 +108,7 @@ elif args.sat == None:
                'cloud': args.cloud,
                'username':s2_credentials['username'],
                'password': s2_credentials['password'],
-               'path':os.path.join(args.path, 's2_tiles')}
+               'output_path':os.path.join(args.path, 's2_tiles')}
 
     #download sentinel files
     s = sentinel.download_sentinel(**S2_args)
@@ -125,7 +125,7 @@ elif args.sat == None:
                'cloud': args.cloud,
                'username':l8_credentials['username'],
                'password': l8_credentials['password'],
-               'path':os.path.join(args.path, 'l8_tiles')}
+               'output_path':os.path.join(args.path, 'l8_tiles')}
 
     #download landsat files
     l = landsat.download_landsat(**l8_args)
