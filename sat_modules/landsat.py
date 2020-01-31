@@ -145,7 +145,7 @@ class download_landsat:
         for r in results:
             tile_id = r['entityId']
 
-            save_dir = os.path.join(self.path, tile_id)
+            save_dir = os.path.join(self.output_path, tile_id)
 
             if not os.path.isdir(save_dir):
                 os.mkdir(save_dir)
