@@ -34,7 +34,9 @@ producttype : str. Dataset type.
 cloud: int
 path : path
 
-Author: Daniel Garcia Diaz
+Author: Daniel García Díaz
+Institute of Physics of Cantabria (IFCA)
+Advanced Computing and e-Science
 Date: Sep 2018
 """
 
@@ -65,7 +67,6 @@ class download_sentinel:
         self.output_path = output_path
         if not os.path.isdir(self.output_path):
             os.mkdir(self.output_path)
-        
 
         #ESA APIs
         self.api_url = 'https://scihub.copernicus.eu/apihub/'
@@ -136,19 +137,20 @@ class download_sentinel:
         if not isinstance(results, list):
             results = [results]
 
+        s2_tiles = []
+
         for r in results:
 
             url, tile_id = r['link'][0]['href'], r['title']
-            print('Downloading {} ...'.format(tile_id))
+            save_dir = os.path.join(self.output_path, '{}.zip'.format(tile_id))
 
-            save_dir = os.path.join(self.output_path, '{}.SAFE'.format(tile_id))
-            if os.path.isdir(save_dir):
-                print('File already downloaded')
-                continue
+            print('Downloading {} ...'.format(tile_id))
+            s2_tiles.append(tile_id)
 
             response = self.session.get(url, stream=True, allow_redirects=True, auth=(self.credentials['username'],
                                                                                       self.credentials['password']))
-            utils.open_compressed(byte_stream=response.raw.read(),
-                                  file_format='zip',
-                                  output_folder=self.output_path)
 
+            with open(save_dir, 'wb') as f:
+                f.write(response.content)
+
+        return s2_tiles

@@ -29,11 +29,15 @@ producttype : str; Dataset type. A list of productypes can be found in https://m
 username: str
 password : str
 
-Author: Daniel Garcia Diaz
+Author: Daniel García Díaz
+Institute of Physics of Cantabria (IFCA)
+Advanced Computing and e-Science
 Date: Sep 2018
 """
 #APIs
 import os, re
+import shutil
+import tarfile
 import json
 
 import requests
@@ -68,7 +72,7 @@ class download_landsat:
         self.coord = coordinates
         self.producttype = producttype
         self.region = region
-        self.cloud = cloud
+        self.cloud = int(cloud)
 
         #work path
         self.output_path = output_path
@@ -110,6 +114,7 @@ class download_landsat:
                                    'upperRight': {'latitude': self.coord['N'],
                                                   'longitude': self.coord['E']}
                                    },
+                 'maxCloudCover': self.cloud,
                  'apiKey': self.api_key
                  }
 
@@ -141,22 +146,24 @@ class download_landsat:
         response = self.session.post(self.login_url, data=data, allow_redirects=False)
         response.raise_for_status()
 
+        l8_tiles = []
+
         # Download the files
         for r in results:
             tile_id = r['entityId']
 
-            save_dir = os.path.join(self.output_path, tile_id)
-
-            if not os.path.isdir(save_dir):
-                os.mkdir(save_dir)
-            else:
-                print('File {} already downloaded'.format(tile_id))
-                continue
+            tile_path = os.path.join(self.output_path, tile_id)
+            gz_path = os.path.join(self.output_path, '{}.gz'.format(tile_id))
 
             print('Downloading {} ...'.format(tile_id))
+            l8_tiles.append(tile_id)
 
             url = 'https://earthexplorer.usgs.gov/download/12864/{}/STANDARD/EE'.format(tile_id)
             response = self.session.get(url, stream=True, allow_redirects=True)
-            utils.open_compressed(byte_stream=response.raw.read(),
-                                  file_format='gz',
-                                  output_folder=save_dir)
+
+            with open(gz_path, 'wb') as f:
+                f.write(response.content)
+
+            utils.get_zipfile(tile_path, gz_path)
+
+        return l8_tiles

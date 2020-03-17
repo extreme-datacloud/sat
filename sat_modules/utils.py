@@ -17,19 +17,18 @@
 """
 Satellite utils
 
-Author: Daniel Garcia Diaz
+Author: Daniel García Díaz
+Institute of Physics of Cantabria (IFCA)
+Advanced Computing and e-Science
 Date: May 2018
 """
 
-#Submodules
-from sat_modules import config
-
 #APIs
+import os, shutil
+import io
+
 import zipfile, tarfile
 import argparse
-
-import os
-import io
 
 import datetime
 from six import string_types
@@ -81,68 +80,14 @@ def valid_date(sd, ed):
         raise argparse.ArgumentTypeError(msg)
 
 
-def valid_region(region, coord = None):
-    """
-    check if the region exits in the config file
+def get_zipfile(tile_path, gz_path):
 
-    Parameters
-    ----------
-    coordinates: list of coordinates
+    tar_path = '{}.tgz'.format(tile_path)
 
-    Raises
-    ------
-    FormatError
-            Not a valid region
-    """
+    with tarfile.open(gz_path, 'r') as tar:
+        tar.extractall(tile_path)
+    os.remove(gz_path)
 
-    if region in config.regions:
-
-        coordinates = config.regions[region]
-
-    else:
-
-        #Hacer saltar el widget del mapa
-
-        W = round(-360.0 + float(coord.split('[')[2][:8]), 4)
-        S = float(coord.split('[')[2][-11:-4])
-        E = round(-360.0 + float(coord.split('[')[4][:8]), 4)
-        N = float(coord.split('[')[4][-11:-4])
-
-        coordinates = {}
-        coordinates['W'], coordinates['S'] = W, S
-        coordinates['E'], coordinates['N'] = E, N
-
-    return coordinates
-
-
-def open_compressed(byte_stream, file_format, output_folder):
-    """
-    Extract and save a stream of bytes of a compressed file from memory.
-    Parameters
-    ----------
-    byte_stream : bytes
-    file_format : str
-        Compatible file formats: tarballs, zip files
-    output_folder : str
-        Folder to extract the stream
-    Returns
-    -------
-    Folder name of the extracted files.
-    """
-
-    tar_extensions = ['tar', 'bz2', 'tb2', 'tbz', 'tbz2', 'gz', 'tgz', 'lz', 'lzma', 'tlz', 'xz', 'txz', 'Z', 'tZ']
-    if file_format in tar_extensions:
-        tar = tarfile.open(mode="r:{}".format(file_format), fileobj=io.BytesIO(byte_stream))
-        tar.extractall(output_folder)
-        folder_name = tar.getnames()[0]
-        return os.path.join(output_folder, folder_name)
-
-    elif file_format == 'zip':
-        zf = zipfile.ZipFile(io.BytesIO(byte_stream))
-        zf.extractall(output_folder)
-        folder_name = zf.namelist()[0].split('/')[0]
-        return os.path.join(output_folder, folder_name)
-
-    else:
-        raise ValueError('Invalid file format for the compressed byte_stream')
-
+    with tarfile.open(tar_path, "w:gz" ) as tar:
+        tar.add(tile_path)
+    shutil.rmtree(tile_path)
