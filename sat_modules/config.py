@@ -1,5 +1,5 @@
 #Sentinel credentials
-sentinel_pass = {'username':"lifewatch", 'password':"xdc_lfw_data"}
+sentinel_pass = {'username':"lifewatch", 'password':"*******"}
 
 #Landsat credentials
-landsat_pass = {'username':"lifewatch", 'password':"xdc_lfw_data2018"}
+landsat_pass = {'username':"lifewatch", 'password':"*********"}
