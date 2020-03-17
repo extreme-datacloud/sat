@@ -124,7 +124,7 @@ class download_sentinel:
                 return False
         results[:] = [r for r in results if keep(r)]
 
-        print('Found {} results'.format(json_feed['opensearch:totalResults']))
+        print('Found {} results from Sentinel'.format(json_feed['opensearch:totalResults']))
         print('Retrieving {} results'.format(len(results)))
 
         return results
