@@ -39,4 +39,4 @@ def test_nasa_login(login_params):
     session.auth = (login_params[5], login_params[6])
     response = session.get(login_params[4], auth=session.auth)
 
-    assert response.status_code == login_params[2]
+    assert response.status_code == login_params[0]
