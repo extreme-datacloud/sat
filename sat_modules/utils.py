@@ -82,12 +82,23 @@ def valid_date(sd, ed):
 
 def get_zipfile(tile_path, gz_path):
 
-    tar_path = '{}.tgz'.format(tile_path)
-
     with tarfile.open(gz_path, 'r') as tar:
         tar.extractall(tile_path)
     os.remove(gz_path)
 
-    with tarfile.open(tar_path, "w:gz" ) as tar:
-        tar.add(tile_path)
+    #create zipfile
+    zf = zipfile.ZipFile("{}.zip".format(tile_path), "w", zipfile.ZIP_DEFLATED)
+
+    # Read all directory, subdirectories and file lists
+    for root, directories, files in os.walk(tile_path):
+        for filename in files:
+
+            # Create the full filepath by using os module.
+            filePath = os.path.join(root, filename)
+            tile = ('/').join(filePath.split('/')[-2:])
+
+            # writing files to a zipfile
+            zf.write(filePath, tile)
+
+    zf.close()
     shutil.rmtree(tile_path)
