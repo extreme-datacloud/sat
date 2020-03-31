@@ -18,7 +18,9 @@ parser.add_argument('-path',
                    required=True)
 
 args = parser.parse_args()
+
 sat_args = json.loads(args.sat_args)
+
 path = args.path
 if not os.path.isdir(path):
     os.mkdir(path)
