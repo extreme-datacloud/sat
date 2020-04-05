@@ -57,14 +57,9 @@ def metadata_gen(title,dateIni,dateEnd,geographicDesc,westBounding,eastBounding,
     tree = ET.ElementTree(eml)
 
     #Escribimos los datos en un archivo or onedata attachement
-
-    print('onedata_url:  {}'.format(config.onedata_url))
-    print('onedata_api:  {}'.format(config.onedata_api))
-    print('onedata_space: {}'.format(config.onedata_space))
-    print ('Region:  {}'.format(geographicDesc))
-    print ('tile:  {}'.format(title))
     
     xml_path = os.path.join(config.datasets_path, geographicDesc, '{}.xml'.format(title))
+    print(xml_path)
     tree.write(xml_path, encoding='UTF-8', xml_declaration=True)
 
     if (config.onedata_mode == 1):
@@ -74,6 +69,12 @@ def metadata_gen(title,dateIni,dateEnd,geographicDesc,westBounding,eastBounding,
             token = 'MDAyOGxvY2F00aW9uIG9uZXpvbmUuY2xvdWQuY25hZi5pbmZuLml00CjAwMzBpZGVudGlmaWVyIDk4OTgwNjc1MWU00NjhlZjA1ODZjNzMwZDNjNjVjN2IxCjAwMWFjaWQgdGltZSA8IDE2MTcxNzY1NTkKMDAyZnNpZ25hdHVyZSChV36AW00frfBqr02CpD3B6SxVXnVMuP8vsHE6yEqJFsKgo'
         header_json = {'X-Auth-Token': token, 'Content-type' : 'application/json'}
         try:
+            print('onedata_url:  {}'.format(config.onedata_url))
+            print('onedata_api:  {}'.format(config.onedata_api))
+            print('onedata_space: {}'.format(config.onedata_space))
+            print ('Region:  {}'.format(geographicDesc))
+            print ('tile:  {}'.format(title))
+            
             url = '{}{}metadata/json/{}/{}/{}'.format(config.onedata_url, config.onedata_api, config.onedata_space, geographicDesc, title)
             print (url)
 
@@ -81,6 +82,13 @@ def metadata_gen(title,dateIni,dateEnd,geographicDesc,westBounding,eastBounding,
             print("Metadata attachement: %i" % r.status_code)
             os.remove(config.datasets_path + '/' + geographicDesc + '/' + title+".xml")
         except requests.exceptions.RequestException as e:
+            
+            print('onedata_url:  {}'.format(config.onedata_url))
+            print('onedata_api:  {}'.format(config.onedata_api))
+            print('onedata_space: {}'.format(config.onedata_space))
+            print ('Region:  {}'.format(geographicDesc))
+            print ('tile:  {}'.format(title))
+            
             print(e)
     print(tree)
 
