@@ -58,8 +58,14 @@ def metadata_gen(title,dateIni,dateEnd,geographicDesc,westBounding,eastBounding,
 
     #Escribimos los datos en un archivo or onedata attachement
 
-    tree.write(config.datasets_path + '/' + geographicDesc + '/' + title+".xml",encoding='UTF-8', xml_declaration=True)
-#    xml_path = config.datasets_path + '/' + geographicDesc + '/' + title+".xml"
+    print('onedata_url:  {}'.format(config.onedata_url))
+    print('onedata_api:  {}'.format(config.onedata_api))
+    print('onedata_space: {}'.format(config.onedata_space))
+    print ('Region:  {}'.format(geographicDesc))
+    print ('tile:  {}'.format(title))
+    
+    xml_path = os.path.join(config.datasets_path, geographicDesc, '{}.xml'.format(title))
+    tree.write(xml_path, encoding='UTF-8', xml_declaration=True)
 
     if (config.onedata_mode == 1):
         try:
