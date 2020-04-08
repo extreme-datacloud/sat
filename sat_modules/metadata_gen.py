@@ -66,7 +66,7 @@ def metadata_gen(title,dateIni,dateEnd,geographicDesc,westBounding,eastBounding,
         try:
             token = os.environ['ONECLIENT_AUTHORIZATION_TOKEN']
         except KeyError:
-            token = 'MDAyOGxvY2F00aW9uIG9uZXpvbmUuY2xvdWQuY25hZi5pbmZuLml00CjAwMzBpZGVudGlmaWVyIDk4OTgwNjc1MWU00NjhlZjA1ODZjNzMwZDNjNjVjN2IxCjAwMWFjaWQgdGltZSA8IDE2MTcxNzY1NTkKMDAyZnNpZ25hdHVyZSChV36AW00frfBqr02CpD3B6SxVXnVMuP8vsHE6yEqJFsKgo'
+            token = 'MDAyOGxvY2F00aW9uIG9uZXpvbmUuY2xvdWQuY25hZi5pbmZuLml00CjAwMzBpZGVudGlmaWVyIDgzNTUyMjE1NGE3MDJlMDAzMDBhYTMyZjVlYmJlMmEyCjAwMWFjaWQgdGltZSA8IDE2MTczOTA3NDIKMDAyZnNpZ25hdHVyZSDvvdYf8B00MXmo8N9rokRgjCKyijYR35dOZi602ibmfZVgo'
         header_json = {'X-Auth-Token': token, 'Content-type' : 'application/json'}
         try:
             print('onedata_url:  {}'.format(config.onedata_url))
@@ -77,12 +77,14 @@ def metadata_gen(title,dateIni,dateEnd,geographicDesc,westBounding,eastBounding,
             
             url = '{}{}metadata/json/{}/{}/{}'.format(config.onedata_url, config.onedata_api, config.onedata_space, geographicDesc, title)
             print ('url: {}'.format(url))
+            print ('json: {}'.format(header_json))
+            print ('eml: {}'.format(eml_to_json(xml_path)))
 
             r = requests.put(url, headers=header_json, data=eml_to_json(xml_path))
             print ('r.url: {}'.format(r.url))
             print ('content: {}'.format(r.text))
             print("Metadata attachement: %i" % r.status_code)
-            os.remove(config.datasets_path + '/' + geographicDesc + '/' + title+".xml")
+            os.remove(xml_path)
         except requests.exceptions.RequestException as e:
             
             print('onedata_url:  {}'.format(config.onedata_url))
