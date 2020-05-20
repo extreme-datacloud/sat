@@ -43,7 +43,7 @@ import json
 import requests
 
 #subfunctions
-from sat_modules import utils
+from sat_modules import utils, config, metadata_gen
 
 class download_landsat:
 
@@ -152,8 +152,13 @@ class download_landsat:
         for r in results:
             tile_id = r['entityId']
 
+            tile = '{}.nc'.format(tile_id)
             tile_path = os.path.join(self.output_path, tile_id)
             gz_path = os.path.join(self.output_path, '{}.gz'.format(tile_id))
+
+            if metadata_gen.is_downloaded(config.onedata_token, tile):
+                print ('File {} already downloaded'.format(tile_id))
+                continue
 
             print('Downloading {} ...'.format(tile_id))
             l8_tiles.append(tile_id)

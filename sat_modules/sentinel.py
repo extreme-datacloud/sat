@@ -41,7 +41,7 @@ Date: Sep 2018
 """
 
 #imports subfunctions
-from sat_modules import utils
+from sat_modules import utils, config, metadata_gen
 
 #imports apis
 import requests
@@ -142,7 +142,12 @@ class download_sentinel:
         for r in results:
 
             url, tile_id = r['link'][0]['href'], r['title']
+            tile = '{}.nc'.format(tile_id)
             save_dir = os.path.join(self.output_path, '{}.zip'.format(tile_id))
+
+            if metadata_gen.is_downloaded(config.onedata_token, tile):
+                print ('File {} already downloaded'.format(tile_id))
+                continue
 
             print('Downloading {} ...'.format(tile_id))
             s2_tiles.append(tile_id)

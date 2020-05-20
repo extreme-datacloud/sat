@@ -83,7 +83,7 @@ def valid_date(sd, ed):
 def get_zipfile(tile_path, gz_path):
 
     with tarfile.open(gz_path, 'r') as tar:
-        tar.extractall(tile_path)
+        tar.extractall(path=tile_path, members=None)
     os.remove(gz_path)
 
     #create zipfile

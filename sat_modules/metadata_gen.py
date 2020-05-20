@@ -45,21 +45,11 @@ def metadata_gen(title,dateIni,dateEnd,geographicDesc,westBounding,eastBounding,
     #---endDate
     ET.SubElement(ET.SubElement(rangeOfDates,"endDate"),"calendarDate").text=dateEnd
 
-    #--Dataset type
-    fileFormat = "csv"
-    if fileFormat == "csv":
-
-        #filename.split(".")[-1]
-        dataTable=ET.SubElement(dataset,"dataTable")
-        ET.SubElement(dataTable,"FileName").text=title+".csv"
-        dataTable = file_block_csv(title,params,dataTable)
-
     tree = ET.ElementTree(eml)
 
     #Escribimos los datos en un archivo or onedata attachement
-    
+
     xml_path = os.path.join(config.datasets_path, geographicDesc, '{}.xml'.format(title))
-    print('xml_path: {}'.format(xml_path))
     tree.write(xml_path, encoding='UTF-8', xml_declaration=True)
 
     if (config.onedata_mode == 1):
@@ -74,28 +64,21 @@ def metadata_gen(title,dateIni,dateEnd,geographicDesc,westBounding,eastBounding,
             print('onedata_space: {}'.format(config.onedata_space))
             print ('Region:  {}'.format(geographicDesc))
             print ('tile:  {}'.format(title))
-            
-            url = '{}{}metadata/json/{}/{}/{}'.format(config.onedata_url, config.onedata_api, config.onedata_space, geographicDesc, title)
-            print ('url: {}'.format(url))
-            print ('json: {}'.format(header_json))
-            print ('eml: {}'.format(eml_to_json(xml_path)))
 
+            url = '{}{}metadata/json/{}/{}/{}'.format(config.onedata_url, config.onedata_api, config.onedata_space, geographicDesc, title)
             r = requests.put(url, headers=header_json, data=eml_to_json(xml_path))
-            print ('r.url: {}'.format(r.url))
-            print ('content: {}'.format(r.text))
             print("Metadata attachement: %i" % r.status_code)
             os.remove(xml_path)
+
         except requests.exceptions.RequestException as e:
-            
+
             print('onedata_url:  {}'.format(config.onedata_url))
             print('onedata_api:  {}'.format(config.onedata_api))
             print('onedata_space: {}'.format(config.onedata_space))
             print ('Region:  {}'.format(geographicDesc))
             print ('tile:  {}'.format(title))
-            
-            print(e)
-    print(tree)
 
+            print(e)
 
 def file_block_csv(title,params,parent):
     dataTable=ET.SubElement(parent,"dataTable", id=title)
@@ -163,4 +146,64 @@ def eml_to_json(xml_file):
     with open(xml_file, "rb") as f:
         o = xmltodict.parse(f, xml_attribs=True)
     result = json.dumps(o)
+    return result
+
+
+def list_onedata_views(onedata_token):
+    headers = {"X-Auth-Token": onedata_token}
+    space_id = "ecf6abbd4fcd6d6c9b505d5f5e82f94c"
+    url = ("https://vm027.pub.cloud.ifca.es"
+       "/api/v3/oneprovider/spaces/%s/views/" %
+           space_id)
+    r = requests.get(url, headers=headers)
+    return json.loads(r.content)["views"]
+
+
+def create_filename_view(onedata_token):
+    headers = {"X-Auth-Token": onedata_token}
+    url = ("https://vm027.pub.cloud.ifca.es"
+           "/api/v3/oneprovider/spaces/ecf6abbd4fcd6d6c9b505d5f5e82f94c")
+    r = requests.get(url, headers=headers)
+#    space_id = json.loads(r.content)['spaceId']
+    space_id= 'ecf6abbd4fcd6d6c9b505d5f5e82f94c'
+    data = open('/wq_sat/views/view_filename.js','rb')
+    print ('data_ {}'.format(data))
+    print('Searching models')
+    index_name = 'filename'
+    url = ("https://vm027.pub.cloud.ifca.es"
+           "/api/v3/oneprovider/spaces/%s/views/%s?spatial=false" % (
+               space_id, index_name))
+    r = requests.put(url, data = data, headers = headers)
+    return r.status_code
+
+
+def is_downloaded(onedata_token, filename):
+    headers = {"X-Auth-Token": onedata_token}
+    url = ("https://vm027.pub.cloud.ifca.es"
+           "/api/v3/oneprovider/spaces/ecf6abbd4fcd6d6c9b505d5f5e82f94c")
+    r = requests.get(url, headers=headers)
+#    space_id = json.loads(r.content)['spaceId']
+    space_id= 'ecf6abbd4fcd6d6c9b505d5f5e82f94c'
+    index_name = 'filename'
+
+    if index_name not in list_onedata_views(onedata_token):
+        create_filename_view(onedata_token)
+    url = ("https://vm027.pub.cloud.ifca.es"
+           "/api/v3/oneprovider/spaces/%s/views/%s/query?spatial=false&stall=false" % (
+               space_id, index_name))
+    r = requests.get(url, headers=headers)
+    response = json.loads(r.content)
+
+    result = False
+
+    if len(response) == 0:
+        return result
+    elif len(response) == 1:
+        response = response[0]['key']
+    elif len(response) == 2:
+        response = response[0]['key'] + response[1]['key']
+
+    if filename in response:
+        result = True
+
     return result
