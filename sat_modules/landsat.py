@@ -15,195 +15,160 @@
 # under the License.
 
 """
-Given two dates and region, download N Landsat Collections scenes from 
-EarthExplorer.
+Given two dates and region, download N Landsat Collections scenes from EarthExplorer.
 The downloaded Landsat collection scenes are compatible with LANDSAT_8_C1
 
 Parameters
 ----------
 inidate: datetime.strptime("YYYY-MM-dd", "%Y-%m-%d")
 enddate: datetime.strptime("YYYY-MM-dd", "%Y-%m-%d")
-region: name of one reservoir saved in the "coord_reservoirs.json" file
+region: name of one reservoir
+coordinates : dict; Coordinates of the region to search.
+Example: {"W": -2.830, "S": 41.820, "E": -2.690, "N": 41.910}}
+producttype : str; Dataset type. A list of productypes can be found in https://mapbox.github.io/usgs/reference/catalog/ee.html
+username: str
+password : str
 
-Author: Daniel Garcia Diaz
+Author: Daniel García Díaz
+Institute of Physics of Cantabria (IFCA)
+Advanced Computing and e-Science
 Date: Sep 2018
 """
-
-#imports subfunctions
-from sat_modules import config
-from sat_modules import utils
-
-#imports apis
+#APIs
+import os, re
+import shutil
+import tarfile
 import json
+
 import requests
-import re
-from tqdm import tqdm
-import os
 
-class Landsat:
+#subfunctions
+from sat_modules import utils, config, metadata_gen
 
-    def __init__(self, inidate, enddate, region=None, producttype = "LANDSAT_8_C1"):
+class download_landsat:
+
+    def __init__(self, inidate, enddate, region, coordinates=None, producttype='LANDSAT_8_C1', cloud=100,
+                 username=None, password=None, output_path=None):
         """
-        initialize the variables used in the landsat class
-
         Parameters
         ----------
-        inidate : str "%Y-%m-%d"
-        enddate : str "%Y-%m-%d"
-        region : str. e.g: "CdP"
+        inidate : str
+            Initial date of the query in format '%Y-%m-%dT%H:%M:%SZ'
+        enddate : str
+            Final date of the query in format '%Y-%m-%dT%H:%M:%SZ'
+        coordinates : dict
+            Coordinates of the region to search.
+            Example: {"W": -2.830, "S": 41.820, "E": -2.690, "N": 41.910}}
+        producttype : str
+            Dataset type. A list of productypes can be found in https://mapbox.github.io/usgs/reference/catalog/ee.html
+        username: str
+        password : str
         """
+        self.session = requests.Session()
 
-        #Search parameter needed for download
-        self.inidate = inidate.strftime("%Y-%m-%dT%H:%M:%SZ")
-        self.enddate = enddate.strftime("%Y-%m-%dT%H:%M:%SZ")
-        self.region = region
-        self.coord = config.regions[region]["coordinates"]
+        # Search parameters
+        self.inidate = inidate
+        self.enddate = enddate
+        self.coord = coordinates
         self.producttype = producttype
+        self.region = region
+        self.cloud = int(cloud)
 
         #work path
-        self.path = config.local_path
+        self.output_path = output_path
+        if not os.path.isdir(self.output_path):
+            os.mkdir(self.output_path)
 
-        #metadata of the data
-        self.output = {}
-
-        #earth explorer api data
+        # API
         api_version = '1.4.1'
-        self.api_endpoint = 'https://earthexplorer.usgs.gov/inventory/json/v/{}/'.format(api_version)
+        self.api_url = 'https://earthexplorer.usgs.gov/inventory/json/v/{}/'.format(api_version)
         self.login_url = 'https://ers.cr.usgs.gov/login/'
-        self.credentials = config.landsat_pass #landsat credentials
+        self.credentials = {'username': username, 'password': password}
 
-
-    def to_json(self, **kwargs):
-        """Convert input arguments to a formatted JSON string
-        as expected by the EE API.
-        """
-        return {'jsonRequest': json.dumps(kwargs)}
-
-
-    def login(self):
-        """Get an API key."""
-
-        data = self.to_json(username=self.credentials["username"], password=self.credentials["password"], catalogID='EE')
-        response = requests.post(self.api_endpoint + 'login?', data=data).json()
-
-        if response['error']:
-            print ('EE: {}'.format(response['error']))
-        return response['data']
-
-
-    def _get_tokens(self, body):
-        """Get `csrf_token` and `__ncforminfo`."""
-
-        csrf = re.findall(r'name="csrf_token" value="(.+?)"', body)
-        ncform = re.findall(r'name="__ncforminfo" value="(.+?)"', body)
-
-        return csrf, ncform
-
+        # Fetching the API key
+        data = {'username': username,
+                'password': password,
+                'catalogID': 'EE'}
+        response = self.session.post(self.api_url + 'login?',
+                                     data={'jsonRequest': json.dumps(data)})
+        response.raise_for_status()
+        json_feed = response.json()
+        if json_feed['error']:
+            raise Exception('Error while searching: {}'.format(json_feed['error']))
+        self.api_key = json_feed['data']
 
     def search(self):
         """
         build the query and get the Landsat Collections scenes from request def
         """
 
-        #search parameters
-        params = {'datasetName': self.producttype,
-                  'includeUnknownCloudCover': False,
-                  'maxResults': 1000,
-                  'temporalFilter': {'startDate': self.inidate, 
-                                     'endDate': self.enddate},
-                  'spatialFilter': {'filterType': 'mbr',
-                                    'lowerLeft': {'latitude': self.coord['S'], 
-                                                  'longitude': self.coord['W']},
-                                    'upperRight': {'latitude': self.coord['N'], 
-                                                   'longitude': self.coord['E']}}
-                  }
+        # Post the query
+        query = {'datasetName': self.producttype,
+                 'includeUnknownCloudCover': False,
+                 'maxResults': 100,
+                 'temporalFilter': {'startDate': self.inidate,
+                                    'endDate': self.enddate},
+                 'spatialFilter': {'filterType': 'mbr',
+                                   'lowerLeft': {'latitude': self.coord['S'],
+                                                 'longitude': self.coord['W']},
+                                   'upperRight': {'latitude': self.coord['N'],
+                                                  'longitude': self.coord['E']}
+                                   },
+                 'maxCloudCover': self.cloud,
+                 'apiKey': self.api_key
+                 }
 
-        key = self.login()
-        params.update(apiKey=key)
-        params = self.to_json(**params)
+        response = self.session.post(self.api_url + 'search',
+                                     params={'jsonRequest': json.dumps(query)})
+        response.raise_for_status()
+        json_feed = response.json()
+        if json_feed['error']:
+            raise Exception('Error while searching: {}'.format(json_feed['error']))
+        results = json_feed['data']['results']
 
-        url = self.api_endpoint + 'search'
-        response = requests.get(url, params=params).json()
-
-        if response['error']:
-            print ('EE: {}'.format(response['error']))
-        else:
-            response = response['data']
-
-        print('Found {} results from Landsat'.format(len(response['results'])))
-        print('Retrieving {} results'.format(len(response['results'])))
-
-        return response['results']
-
+        print('Found {} results from Landsat'.format(len(results)))
+        return results
 
     def download(self):
 
-        chunk_size=1024
-        session = requests.session()
-        rsp = session.get(self.login_url)
-        csrf, ncform = self._get_tokens(rsp.text)
-
-        payload = {'username': self.credentials['username'],
-                   'password': self.credentials['password'],
-                   'csrf_token': csrf,
-                   '__ncforminfo': ncform
-                   }
-
-        rsp = session.post(self.login_url, data=payload, allow_redirects=False)
-
-        #load the downloaded files
-        with open(os.path.join(self.path, 'downloaded_files.json')) as data_file:
-                downloaded_files = json.load(data_file)
-
         #results of the search
         results = self.search()
+        if not isinstance(results, list):
+            results = [results]
 
-        for scene in results:
+        # Make the login
+        response = self.session.get(self.login_url)
+        data = {'username': self.credentials['username'],
+                'password': self.credentials['password'],
+                'csrf_token': re.findall(r'name="csrf_token" value="(.+?)"', response.text),
+                '__ncforminfo': re.findall(r'name="__ncforminfo" value="(.+?)"', response.text)
+                }
+        response = self.session.post(self.login_url, data=data, allow_redirects=False)
+        response.raise_for_status()
 
-            ID = scene['entityId']
-            #type and level of the data
-            file = scene['displayId'].split('_')
-            if not (file[1] == 'L1TP' and file[-1] == 'T1'):
-                print ("    file {} not valid!!".format(ID))
+        l8_tiles = []
+
+        # Download the files
+        for r in results:
+            tile_id = r['entityId']
+
+            tile = '{}.nc'.format(tile_id)
+            tile_path = os.path.join(self.output_path, tile_id)
+            gz_path = os.path.join(self.output_path, '{}.gz'.format(tile_id))
+
+            if metadata_gen.is_downloaded(config.onedata_token, tile):
+                print ('File {} already downloaded'.format(tile_id))
                 continue
 
-            #Metadata file
-            self.output[ID] = {}
-            self.output[ID]['inidate'] = scene['startTime']
-            self.output[ID]['enddate'] = scene['endTime']
-            self.output[ID]['region'] = self.region
-            self.output[ID]['W'] = str(self.coord['W'])
-            self.output[ID]['E'] = str(self.coord['E'])
-            self.output[ID]['N'] = str(self.coord['N'])
-            self.output[ID]['S'] = str(self.coord['S'])
-            self.output[ID]['params'] = ['B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9', 'B10', 'B11']
+            print('Downloading {} ...'.format(tile_id))
+            l8_tiles.append(tile_id)
 
-            if ID in downloaded_files['Landsat 8'][self.region]:
-                print ("    file {} already downloaded".format(ID))
-                continue
+            url = 'https://earthexplorer.usgs.gov/download/12864/{}/STANDARD/EE'.format(tile_id)
+            response = self.session.get(url, stream=True, allow_redirects=True)
 
-            #create path and folder for the scene
-            date_path = os.path.join(self.path, self.region)
+            with open(gz_path, 'wb') as f:
+                f.write(response.content)
 
-            print ('    Downloading {} files'.format(ID))
-            downloaded_files['Landsat 8'][self.region].append(ID)
+            utils.get_zipfile(tile_path, gz_path)
 
-            #file size
-            band_url = 'https://earthexplorer.usgs.gov/download/12864/{}/STANDARD/EE'.format(ID)
-            resp = session.get(band_url, stream=True, allow_redirects=True)
-            total_size = int(resp.headers['content-Length'])
-
-            #download
-            with tqdm(total=total_size, unit_scale=True, unit='B') as pbar:
-                with session.get(band_url, stream=True, allow_redirects=True) as r:
-                    filename = r.headers['Content-Disposition'].split('=')[-1]
-                    filename = os.path.join(date_path, filename)
-                    with open(filename, 'wb') as f:
-                        for chunk in r.iter_content(chunk_size=chunk_size):
-                            if chunk:
-                                f.write(chunk)
-                                pbar.update(chunk_size)
-
-        # Save the new list of files
-        with open(os.path.join(self.path, 'downloaded_files.json'), 'w') as outfile:
-            json.dump(downloaded_files, outfile)
+        return l8_tiles

@@ -17,29 +17,27 @@
 """
 Satellite utils
 
-Author: Daniel Garcia Diaz
+Author: Daniel García Díaz
+Institute of Physics of Cantabria (IFCA)
+Advanced Computing and e-Science
 Date: May 2018
 """
 
-#Submodules
-from sat_modules import config
-
 #APIs
+import os, shutil
+import io
+
 import zipfile, tarfile
 import argparse
-import numpy as np
-import os, shutil
-import json
+
 import datetime
-import utm
-from netCDF4 import Dataset
 from six import string_types
 
 
 def valid_date(sd, ed):
     """
     check if the format date input is string("%Y-%m-%d") or datetime.date
-    and return it as format datetime.strptime("YYYY-MM-dd", "%Y-%m-%d")
+    and return it as format strftime("%Y-%m-%dT%H:%M:%SZ")
 
     Parameters
     ----------
@@ -49,9 +47,9 @@ def valid_date(sd, ed):
     Returns
     -------
     sd : datetime
-        datetime.strptime("YYYY-MM-dd", "%Y-%m-%d")
+        strftime("%Y-%m-%dT%H:%M:%SZ")
     ed : datetime
-        datetime.strptime("YYYY-MM-dd", "%Y-%m-%d")
+        strftime("%Y-%m-%dT%H:%M:%SZ")
 
     Raises
     ------
@@ -63,14 +61,14 @@ def valid_date(sd, ed):
 
     if isinstance(sd, datetime.date) and isinstance(ed, datetime.date):
 
-        return sd, ed
+        return sd.strftime("%Y-%m-%dT%H:%M:%SZ"), ed.strftime('%Y-%m-%dT%H:%M:%SZ')
 
     elif isinstance(sd, string_types) and isinstance(ed, string_types):    
         try:
             sd = datetime.datetime.strptime(sd, "%Y-%m-%d")
             ed = datetime.datetime.strptime(ed, "%Y-%m-%d")
             if sd < ed:
-                return sd, ed
+                return sd.strftime("%Y-%m-%dT%H:%M:%SZ"), ed.strftime("%Y-%m-%dT%H:%M:%SZ")
             else:
                 msg = "Unsupported date value: '{} or {}'.".format(sd, ed)
                 raise argparse.ArgumentTypeError(msg)
@@ -82,55 +80,25 @@ def valid_date(sd, ed):
         raise argparse.ArgumentTypeError(msg)
 
 
-def valid_region(r):
-    """
-    check if the regions exits
+def get_zipfile(tile_path, gz_path):
 
-    Parameters
-    ----------
-    r(region) : str e.g: "CdP"
+    with tarfile.open(gz_path, 'r') as tar:
+        tar.extractall(path=tile_path, members=None)
+    os.remove(gz_path)
 
-    Raises
-    ------
-    FormatError
-            Not a valid region
-    """
+    #create zipfile
+    zf = zipfile.ZipFile("{}.zip".format(tile_path), "w", zipfile.ZIP_DEFLATED)
 
-    if r in config.regions:
-        pass
-    else:
-        msg = "Not a valid region: '{0}'.".format(r)
-        raise argparse.ArgumentTypeError(msg)
+    # Read all directory, subdirectories and file lists
+    for root, directories, files in os.walk(tile_path):
+        for filename in files:
 
+            # Create the full filepath by using os module.
+            filePath = os.path.join(root, filename)
+            tile = ('/').join(filePath.split('/')[-2:])
 
-def path():
-    """
-    Configure the tree of datasets path. 
-    Create the folder and the downloaded_files file.
+            # writing files to a zipfile
+            zf.write(filePath, tile)
 
-    Parameters
-    ----------
-    path : datasets path from config file
-    """
-
-    file = 'downloaded_files.json'
-    list_region = config.regions
-    local_path = config.local_path
-
-    try:
-        with open(os.path.join(local_path, file)) as data_file:
-            json.load(data_file)
-    except:
-        if not (os.path.isdir(local_path)):
-            os.mkdir(local_path)
-
-        dictionary = {"Sentinel-2": {}, "Landsat 8": {}}
-
-        for region in list_region:
-
-            os.mkdir(os.path.join(local_path, region))
-            dictionary['Sentinel-2'][region] = []
-            dictionary['Landsat 8'][region] = []
-
-        with open(os.path.join(local_path, 'downloaded_files.json'), 'w') as outfile:
-            json.dump(dictionary, outfile)
+    zf.close()
+    shutil.rmtree(tile_path)
